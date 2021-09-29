@@ -1,0 +1,403 @@
+---
+title: 'Station Casinos: Gaming Analytics'
+author: "Harinarayan Parameswara Sarma"
+date: "8/1/2021"
+output: pdf_document
+---
+This is an R Markdown document for Station Casino-PreModule Assignment.
+
+**Step1 - Load the necessary packages.**
+
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+library(readr)
+library(readxl)
+library(openxlsx)
+library(ggplot2)
+library(priceR)
+library(cowplot)
+library(dplyr)
+library(stats)
+library(base)
+library(RColorBrewer)
+```
+
+
+**Step2 - Data Collection and Data preparation.**
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+station_casino <- read_excel("Casino Final_Dec 2013 Raw Data_for test.xlsx", sheet = "Sheet1")
+```
+```{r echo=TRUE,warning=FALSE, message=FALSE}
+station_casino_df <- data.frame(station_casino)
+```
+```{r echo=TRUE,eval=FALSE, warning=FALSE, message=FALSE}
+View(station_casino)
+station_casino_df
+colnames(station_casino_df)
+```
+```{r echo=TRUE, warning=FALSE, message=FALSE}
+names(station_casino_df)[1] <- "Players"
+names(station_casino_df)[8] <- "Other Games" 
+names(station_casino_df)[9] <- "Total Spend"
+```
+```{r echo=TRUE,eval=FALSE, warning=FALSE, message=FALSE}
+colnames(station_casino_df)
+
+dim(station_casino_df)
+sum(is.na(station_casino_df)) # Ans: 0 - There are no NA values in the data/ data frame.
+```
+
+**Question1 - How much total dollars were played on each game?**
+
+ Present the answer to this question as a single bar chart with seven bars, 
+ one for each game (six games and ‘Other Games’ as the seventh), 
+ with the length of each bar representing the total amount bet on that game by all 5000 players 
+ on that specific day. Since these charts are difficult to read accurately, 
+ include the actual correct total dollar value at the top of each bar.
+ 
+Subsetting the Games columns which has the numerical data/monetary columns
+
+ 
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+station_casino_df_subset <- station_casino_df[,2:8]
+station_casino_bar <- data.frame(TotalDollars=apply(station_casino_df_subset,2,sum))
+station_casino_bar$Games <- rownames(station_casino_bar)
+```
+Here we need the Bar chart as the X-axis: Games is categorical.
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE,fig.height=10, fig.width=8}
+
+ggplot(data=station_casino_bar, aes(x=reorder(Games,-TotalDollars), y=TotalDollars, fill=Games)) +
+  geom_bar(colour="black", stat="identity")+
+  geom_text(label=format_dollars(station_casino_bar$TotalDollars,digits=2),vjust=-0.25)+
+  xlab("Games")+
+  theme(legend.position="none")+
+  ggtitle("Total amount bet on each Game by 5000 players on a given day")+
+  theme(plot.title = element_text(hjust = 0.5))+
+  scale_y_continuous(labels=scales::dollar_format())
+```
+From the above barchart, the below percentage of revenue can be assessed
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+Revenue <- data.frame(station_casino_bar$Games,
+             station_casino_bar$TotalDollars,
+             round(station_casino_bar$TotalDollars/sum(station_casino_bar$TotalDollars)*100,2))
+colnames(Revenue) <- c("Games","TotalRevenue ($)","PercentageRevenue (%)")
+```
+Percentage of revenue as shown below.
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+Revenue[order(-Revenue$PercentageRevenue),]
+```
+
+**Question2**
+
+How many people played each of the seven games (six games and 'Other Games" as the seventh) and how much did they wager?
+
+ Create a bar chart for each game (so you will have seven bar charts).
+ Each bar chart should show how many people played that game (the vertical axis)
+ and how many dollars were wagered (use dollar range intervals on the horizontal axis).
+ Plot all seven charts together on a single display
+ (i.e. use the plotgrid function from the cowplot package).
+
+Here we need the Histogram as the X-axis: Dollar Wagered is continuous.
+Also, filtered out each Game with Players with $0(Player wagered no money, hence removed those counts)
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE, fig.height=10, fig.width=8}
+
+axes <- labs(x="Total wagered($)",y="Number of players")
+Slots <- ggplot(data=station_casino_df%>%filter(Slots >0),aes(x=Slots))+
+  #Slots <- ggplot(data=station_casino_df,aes(x=Slots>0))+
+  geom_histogram(bins = 10,binwidth = 500,boundary=0,color="black",fill="aquamarine3")+
+  axes+
+  ggtitle("Slots")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+BJ <- ggplot(data=station_casino_df%>%filter(BJ > 0),aes(x=BJ))+
+  geom_histogram(bins = 10,binwidth = 500,boundary=0,color="black",fill="rosybrown1")+
+  axes+
+  ggtitle("BJ")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+Craps <- ggplot(data=station_casino_df%>%filter(Craps > 0),aes(x=Craps))+
+  geom_histogram(bins = 10,binwidth = 500,boundary=0,color="black",fill="lightblue3")+
+  axes+
+  ggtitle("Craps")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+Bac <- ggplot(data=station_casino_df%>%filter(Bac > 0),aes(x=Bac))+
+  geom_histogram(bins = 10,binwidth = 500,boundary=0,color="black",fill="tomato1")+
+  axes+
+  ggtitle("Bac")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+Bingo <- ggplot(data=station_casino_df%>%filter(Bingo > 0),aes(x=Bingo))+
+  geom_histogram(bins = 10,binwidth = 500,boundary=0,color="black",fill="lightgoldenrod3")+
+  axes+
+  ggtitle("Bingo")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+Poker <- ggplot(data=station_casino_df%>%filter(Poker > 0),aes(x=Poker))+
+  geom_histogram(bins = 10,binwidth = 500,boundary=0,color="black",fill="indianred3")+
+  axes+
+  ggtitle("Poker")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+OtherGames <- ggplot(data=station_casino_df%>%filter(`Other Games` > 0),aes(x=`Other Games`))+
+  geom_histogram(bins = 10,binwidth = 500,boundary=0,color="black",fill="slateblue1")+
+  axes+
+  ggtitle("Other Games")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+title <- ggdraw() + draw_label("Spend and Number of Players by Game", fontface='bold')
+plot_games <- plot_grid(Slots,BJ,Craps,Bac,Bingo,Poker,OtherGames)   
+plot_grid(title,plot_games,ncol = 1,
+          # rel_heights values control vertical title margins
+          rel_heights = c(0.1, 1))
+```
+
+Filtered the Plot for a meaningful insight.
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE, fig.height=10, fig.width=8}
+
+axes <- labs(x="Total wagered($)",y="Number of players")
+Slots <- ggplot(data=station_casino_df%>%filter(Slots >= 100),aes(x=Slots))+
+  #Slots <- ggplot(data=station_casino_df,aes(x=Slots>0))+
+  geom_histogram(bins = 10,binwidth = 75,boundary=0,color="black",fill="aquamarine3")+
+  axes+
+  ggtitle("Slots")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+BJ <- ggplot(data=station_casino_df%>%filter(BJ > 500),aes(x=BJ))+
+  geom_histogram(bins = 10,binwidth = 200,boundary=0,color="black",fill="rosybrown1")+
+  axes+
+  ggtitle("BJ")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+Craps <- ggplot(data=station_casino_df%>%filter(Craps > 600),aes(x=Craps))+
+  geom_histogram(bins = 25,binwidth = 200,boundary=0,color="black",fill="lightblue3")+
+  axes+
+  ggtitle("Craps")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+Bac <- ggplot(data=station_casino_df%>%filter(Bac > 200),aes(x=Bac))+
+  geom_histogram(bins = 25,binwidth = 100,boundary=0,color="black",fill="tomato1")+
+  axes+
+  ggtitle("Bac")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+Bingo <- ggplot(data=station_casino_df%>%filter(Bingo > 0),aes(x=Bingo))+
+  geom_histogram(bins = 25,binwidth = 10,boundary=0,color="black",fill="lightgoldenrod3")+
+  axes+
+  ggtitle("Bingo")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+Poker <- ggplot(data=station_casino_df%>%filter(Poker > 50),aes(x=Poker))+
+  geom_histogram(bins = 25,binwidth = 50,boundary=0,color="black",fill="indianred3")+
+  axes+
+  ggtitle("Poker")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+OtherGames <- ggplot(data=station_casino_df%>%filter(`Other Games` > 100),aes(x=`Other Games`))+
+  geom_histogram(bins = 25,binwidth = 50,boundary=0,color="black",fill="slateblue1")+
+  axes+
+  ggtitle("Other Games")+
+  theme(plot.title = element_text(hjust = 0.5))
+
+title <- ggdraw() + draw_label("Spend and Number of Players by Game (Filtered)", fontface='bold')
+plot_games <- plot_grid(Slots,BJ,Craps,Bac,Bingo,Poker,OtherGames)   
+plot_grid(title,plot_games,ncol = 1,
+          # rel_heights values control vertical title margins
+          rel_heights = c(0.1, 1))
+```
+
+
+
+**Interpretation of the Gaming charts.**
+
+Take 'Slots' bar chart as an example, and re-distribute the frequency.
+A similar interpretation can be done for all other Game charts.
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+ggplot(data=station_casino_df%>%filter(Slots > 0),aes(x=Slots))+
+  geom_histogram(bins = 10,binwidth = 100,boundary=0,color="black",fill="aquamarine3")+
+  axes+
+  ggtitle("Slots")+
+  theme(plot.title = element_text(hjust = 0.5))
+```
+Some of the below observations can be inferred for the management.
+
+Observation1: $0-$500 - spent by adding up the bars - 1800+600+125+250+300 ~ 3075 players
+
+Observation2: $500-$1000 - spent by adding up the bars - 275+250+225+200+150 ~ 1100 players
+ 
+**Question3** 
+
+Management wants to offer comps to their players based on which games they play, 
+how much they wager and their value to the casino. 
+Clearly the 5000 players have strong differences in terms of what games they play and 
+the amount of their bankrolls. 
+(i.e. a player who wagers $5000-$10000 per day should be offered much more than 
+ a 25-cent slot machine player who wagers $40 per day.)
+
+Use a K-Means Cluster Analysis to create groupings among the players that will help management
+to determine what type (and value) of comps should be offered to players in each grouping. 
+Keep the number of groups in the 3-6 range (K=3 to 6). 
+Show the K=6 results as a Scatterplot Matrix showing every combination of two games 
+(i.e. use the pairs function from the cars package).
+
+Data Exploration and Measures of Central Tendency.
+```{r echo=TRUE,eval=FALSE, warning=FALSE, message=FALSE}
+str(station_casino_df)
+```
+Subsetting the Games features
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+station_casino_games <- station_casino_df[2:8]
+```
+As the summary function denotes some features come to dominate solely 
+because they have a larger range of values than the others.
+The Summary function confirms again that there no NA values. So, no Imputation required
+
+```{r echo=TRUE,eval=FALSE, warning=FALSE, message=FALSE}
+summary(station_casino_games$Slots)
+summary(station_casino_games$BJ)
+summary(station_casino_games$Craps)
+summary(station_casino_games$Bac)
+summary(station_casino_games$Bingo)
+summary(station_casino_games$Poker)
+summary(station_casino_games$`Other Games`)
+```
+Some features come to dominate solely because they have a larger range of values than the others.
+The process of z-score standardization rescales features such that they have a mean of zero and 
+a standard deviation of one. This transformation changes the interpretation of the data in a way that may be useful here.
+
+To apply z-score standardization to the station_casino_games data frame, we can use the scale() function with lapply(). 
+Since lapply() returns a matrix, it must be coerced back to data frame form 
+using the as.data.frame() function, as follows.
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+station_casino_games_z <- as.data.frame(lapply(station_casino_games, scale))
+names(station_casino_games_z)[7] <- "Other Games" 
+```
+
+To confirm that the transformation worked correctly, 
+we can compare the summary statistics.
+```{r echo=TRUE,eval=FALSE, warning=FALSE, message=FALSE}
+summary(station_casino_games$Slots)
+summary(station_casino_games_z$Slots)
+```
+
+Because the k-means algorithm utilizes random starting points, we use the set.seed() function
+for any later point analysis.
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+RNGversion("3.5.2")
+set.seed(2345)
+# Set k=3
+station_casino_clusters3 <- kmeans(station_casino_games_z, 3)
+station_casino_clusters3$size
+station_casino_clusters3$centers
+
+# Set k=4
+station_casino_clusters4 <- kmeans(station_casino_games_z, 4)
+station_casino_clusters4$size
+station_casino_clusters4$centers
+
+# Set k=5
+station_casino_clusters5 <- kmeans(station_casino_games_z, 5)
+station_casino_clusters5$size
+station_casino_clusters5$centers
+
+#Finally, k=6 for the detailed analysis
+station_casino_clusters <- kmeans(station_casino_games_z, 6)
+```
+
+The goal of this analysis was to identify clusters of players with similar interests for
+compensation purposes. we will largely measure our success in qualitative terms.
+
+The number of players in each cluster
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+station_casino_clusters$size
+```
+
+Smallest cluster is 99 with 2% and largest is 3010 with 60%.
+To confirm confirm the percentage gap is real or random, we will look into cluster's homogeneity
+For a more in-depth look at the clusters, we can examine the coordinates of the cluster centroids.
+
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+station_casino_clusters$centers
+```
+The rows of the output (labeled 1 to 6) refer to the six clusters,
+while the numbers across each row indicate the cluster's average value for 
+the dollar wager listed at the top of the column. Because the values are z-score standardized, 
+positive values are above the overall mean level and negative values are below the overall mean.
+
+For example, the fourth row has the highest value in the Bac column, 
+which means that cluster 4 has the highest average dollar wager in Bac among all the players.
+
+Cluster 4 is substantially above the mean level on Slots, BJ, Craps and Bac.
+Cluster 1 players have lower-than average levels of dollar wager.
+One potential explanation is that these players will come to Casino but do not wager much.
+
+Cluster1 = less revenue cluster
+Cluster2 = Other Games
+Cluster3 = Slots, BJ, Bac, Poker, Other Games
+Cluster4 = Slots, BJ, Craps, Bac
+Cluster5 = Poker
+Cluster6 = Slots, Bingo
+
+Given the above high-level inference, the Station Casino management would have a clear depiction of six types of players. Based on these profiles, the executive could provide appropriate comps.
+
+We will begin by applying the clusters back onto the full dataset - The cluster assignments for all 5000 players
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+station_casino_df$cluster <- station_casino_clusters$cluster
+```
+Show the K=6 results as a Scatterplot Matrix showing every combination of two games (i.e. use the pairs function from the cars package)
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE, fig.height=10, fig.width=10}
+pairs(station_casino_df[2:8],col=station_casino_df$cluster, lower.panel = NULL,
+      main=" K=6 : Scatterplot Matrix showing every combination of two games")
+par(xpd = TRUE)
+legend("bottomleft", legend = sort(unique(station_casino_df$cluster)), pch=1,
+col = sort(unique(station_casino_df$cluster)))
+```
+**Inference: **
+
+
+**Deriving the insights from the clusters**
+```{r echo=TRUE, eval=TRUE, warning=FALSE, message=FALSE}
+station_casino_Interpret <- data.frame(aggregate(data = station_casino_df, Slots ~ cluster, mean),
+aggregate(data = station_casino_df, BJ ~ cluster, mean),
+aggregate(data = station_casino_df, Craps ~ cluster, mean),
+aggregate(data = station_casino_df, Bac ~ cluster, mean),
+aggregate(data = station_casino_df, Bingo ~ cluster, mean),
+aggregate(data = station_casino_df, Poker ~ cluster, mean),
+aggregate(data = station_casino_df, `Other Games` ~ cluster, mean),
+aggregate(data = station_casino_df, `Total Spend` ~ cluster, mean))
+
+station_casino_Interpret <- select(station_casino_Interpret,-cluster.1, -cluster.2, -cluster.3, -cluster.4, -cluster.5, -cluster.6, -cluster.7)
+
+station_casino_Interpret
+```
+**Conclusions and Recommendations**
+
+The objective of the Station Casino management team is to offer comps to their players based on which games they play, how much they wager and their value to the casino by identifying and matching each player to their specific group, defined by the games they play and how much they wager. These groupings should aim to differentiate the type and value of the comps that are offered to the players. This report has deployed segmentation analysis, where the high-value players were identified using the k -means cluster analysis alogorithm. 
+
+The main insights of the clustering are:
+   
+• Cluster 4 is the group which represents the players whose wagering budget could be around $10,000 per day. The characteristic of this group is they tend to play Slots, BJ, Craps and Bac which are the games where the management can control. These players do not wager much on Bingo, Poker and Other Games.
+
+• Cluster 3 is another important group as it is formed by players who wager $2000 in a day. These players appears to bet majorly on Slots, BJ, Bac, Poker, Other Games.
+
+• Cluster 5 players concentration on Poker and having a daily wager of $520 per day.
+
+• Cluster 6 players are wagered on Slots and Bingo and having a total spent of $500 per day
+
+• Cluster 2 is segmented mainly on Other Games, however having a wagering of $500 per day
+
+Note: Clusters 2, 5, 6 gambling budget is not significantly high, but it is not considered low either.
+
+• Clusters 1 is characterized as the group of players that have the lowest average spend in all the games with average amounts less than $250 in a day.
+
+As per these insights, players in cluster 4 should be offered much more comps than players in cluster1. 
+Generally, players in clusters 4 and 3 should be provided with high-value comps to reward their loyalty and retain them as clients.
+
+Players in 2, 5, 6 can be offered some comps to retain them and increase the wager.
+
+Players in 1 should not be offered high-value comps as their wager is significantly low.
+
+In order to obtain a greater overview and insights to decide the value of the comps, it is necessary to use training data that includes information for a longer time period.
